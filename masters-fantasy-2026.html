@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Masters Fantasy 2026 ⛳</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛳</text></svg>">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800;900&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+::selection{background:#C9A84C44}
+html,body{font-family:'Source Sans 3',sans-serif;min-height:100vh;min-height:100dvh;background:linear-gradient(175deg,#0a3d0a 0%,#0d2b0d 40%,#1a1a2e 100%);color:#e8e0d0;-webkit-font-smoothing:antialiased}
+input,select,button{font-family:'Source Sans 3',sans-serif}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
+.fu{animation:fadeUp .35s ease-out both}
+.cd{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;backdrop-filter:blur(10px)}
+.bt{padding:12px 24px;border:none;border-radius:8px;font-weight:600;font-size:14px;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;justify-content:center}
+.bg{background:linear-gradient(135deg,#C9A84C,#a3822e);color:#0d2b0d}
+.bg:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(201,168,76,.3)}
+.bg:disabled{opacity:.5;transform:none;box-shadow:none;cursor:default}
+.bo{background:transparent;border:1px solid rgba(201,168,76,.35);color:#C9A84C}
+.bo:hover{background:rgba(201,168,76,.08)}
+.bs{padding:6px 14px;font-size:12px}
+input[type="text"],input[type="number"],select{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:11px 14px;color:#e8e0d0;font-size:14px;width:100%;outline:none;transition:border .2s}
+input:focus,select:focus{border-color:#C9A84C}
+select option{background:#1a1a2e;color:#e8e0d0}
+.gr{display:flex;align-items:center;padding:9px 12px;border-radius:8px;cursor:pointer;transition:all .12s;gap:10px;border:1px solid transparent}
+.gr:hover{background:rgba(255,255,255,.05)}
+.gr.sel{background:rgba(201,168,76,.1);border-color:rgba(201,168,76,.25)}
+.tb{padding:7px 14px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;border:1px solid transparent;white-space:nowrap;background:none;color:rgba(232,224,208,.45)}
+.tb.a{background:rgba(201,168,76,.12);border-color:rgba(201,168,76,.3);color:#C9A84C}
+.lr{display:grid;grid-template-columns:36px 1fr 50px 50px 54px;align-items:center;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.04);font-size:13px}
+.pb{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px}
+.pill{padding:3px 9px;border-radius:14px;font-size:11px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:3px}
+.toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:10px;font-size:13px;font-weight:500;z-index:999;transition:opacity .3s;pointer-events:none}
+.w100{width:100%}.tac{text-align:center}.tar{text-align:right}
+.fw6{font-weight:600}.fw7{font-weight:700}
+.fs10{font-size:10px}.fs11{font-size:11px}.fs12{font-size:12px}.fs13{font-size:13px}.fs14{font-size:14px}
+.pf{font-family:'Playfair Display',serif}
+.muted{color:rgba(232,224,208,.45)}.muted2{color:rgba(232,224,208,.35)}.muted3{color:rgba(232,224,208,.25)}
+.red{color:#e07070}.green{color:#8B9F6B}.gold{color:#C9A84C}
+.wrap{max-width:520px;margin:0 auto;padding:0 14px 40px}
+.col{display:flex;flex-direction:column}.row{display:flex}
+.gap6{gap:6px}.gap8{gap:8px}.gap10{gap:10px}.gap12{gap:12px}.gap14{gap:14px}
+input[type="checkbox"]{accent-color:#C9A84C;width:16px;height:16px}
+</style>
+</head>
+<body>
+<div id="app"><div style="display:flex;align-items:center;justify-content:center;min-height:100vh;color:rgba(232,224,208,.4);font-size:14px">Loading...</div></div>
+<div id="toast" class="toast" style="opacity:0"></div>
+
+<script>
+// =============================================
+// SUPABASE
+// =============================================
+const SB_URL='https://nxfslvybcakimmicavhb.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im54ZnNsdnliY2FraW1taWNhdmhiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0NzI5MTQsImV4cCI6MjA5MTA0ODkxNH0.vPaRx45NiDhsDT1w54MUSeUVCNOKWfDQaoyTTpJ5GK0';
+const db=supabase.createClient(SB_URL,SB_KEY);
+
+// =============================================
+// FIELD DATA
+// =============================================
+const F=[
+{n:"Scottie Scheffler",t:1,r:1,c:"US",k:0},{n:"Xander Schauffele",t:1,r:2,c:"US",k:0},{n:"Rory McIlroy",t:1,r:3,c:"NIR",k:0},{n:"Ludvig Åberg",t:1,r:4,c:"SWE",k:0},{n:"Collin Morikawa",t:1,r:5,c:"US",k:0},{n:"Jon Rahm",t:1,r:6,c:"ESP",k:0},{n:"Hideki Matsuyama",t:1,r:7,c:"JPN",k:0},{n:"Bryson DeChambeau",t:1,r:8,c:"US",k:0},
+{n:"Viktor Hovland",t:2,r:9,c:"NOR",k:0},{n:"Patrick Cantlay",t:2,r:10,c:"US",k:0},{n:"Tommy Fleetwood",t:2,r:11,c:"ENG",k:0},{n:"Shane Lowry",t:2,r:12,c:"IRL",k:0},{n:"Justin Thomas",t:2,r:13,c:"US",k:0},{n:"Cameron Young",t:2,r:14,c:"US",k:0},{n:"Sam Burns",t:2,r:15,c:"US",k:0},{n:"Keegan Bradley",t:2,r:16,c:"US",k:0},{n:"Corey Conners",t:2,r:17,c:"CAN",k:0},{n:"Sungjae Im",t:2,r:18,c:"KOR",k:0},{n:"Robert MacIntyre",t:2,r:19,c:"SCO",k:0},{n:"Sepp Straka",t:2,r:20,c:"AUT",k:0},
+{n:"Russell Henley",t:3,r:21,c:"US",k:0},{n:"Brian Harman",t:3,r:22,c:"US",k:0},{n:"Wyndham Clark",t:3,r:23,c:"US",k:0},{n:"Akshay Bhatia",t:3,r:24,c:"US",k:0},{n:"Justin Rose",t:3,r:25,c:"ENG",k:0},{n:"Matt Fitzpatrick",t:3,r:26,c:"ENG",k:0},{n:"Tyrrell Hatton",t:3,r:27,c:"ENG",k:0},{n:"Jason Day",t:3,r:28,c:"AUS",k:0},{n:"Max Homa",t:3,r:29,c:"US",k:0},{n:"Harris English",t:3,r:30,c:"US",k:0},{n:"Brooks Koepka",t:3,r:31,c:"US",k:0},{n:"Jordan Spieth",t:3,r:32,c:"US",k:0},{n:"Ryan Fox",t:3,r:33,c:"NZL",k:0},{n:"Chris Gotterup",t:3,r:34,c:"US",k:0},
+{n:"Adam Scott",t:4,r:35,c:"AUS",k:0},{n:"Cameron Smith",t:4,r:36,c:"AUS",k:0},{n:"Nick Taylor",t:4,r:37,c:"CAN",k:0},{n:"Kurt Kitayama",t:4,r:38,c:"US",k:0},{n:"Ben Griffin",t:4,r:39,c:"US",k:0},{n:"Maverick McNealy",t:4,r:40,c:"US",k:0},{n:"Andrew Novak",t:4,r:41,c:"US",k:0},{n:"Harry Hall",t:4,r:42,c:"ENG",k:0},{n:"Nico Echavarría",t:4,r:43,c:"COL",k:0},{n:"Marco Penge",t:4,r:44,c:"ENG",k:1},{n:"Patrick Reed",t:4,r:45,c:"US",k:0},{n:"Jacob Bridgeman",t:4,r:46,c:"US",k:1},{n:"Brian Campbell",t:4,r:47,c:"US",k:1},{n:"Aldrich Potgieter",t:4,r:48,c:"RSA",k:1},{n:"Li Haotong",t:4,r:49,c:"CHN",k:0},{n:"Carlos Ortiz",t:4,r:50,c:"MEX",k:0},{n:"Jake Knapp",t:4,r:63,c:"US",k:1},{n:"Nicolai Højgaard",t:4,r:64,c:"DEN",k:0},{n:"Matt McCarty",t:4,r:65,c:"US",k:1},{n:"Daniel Berger",t:4,r:66,c:"US",k:0},
+{n:"Sergio García",t:5,r:51,c:"ESP",k:0},{n:"Dustin Johnson",t:5,r:52,c:"US",k:0},{n:"Bubba Watson",t:5,r:53,c:"US",k:0},{n:"Danny Willett",t:5,r:54,c:"ENG",k:0},{n:"Charl Schwartzel",t:5,r:55,c:"RSA",k:0},{n:"Zach Johnson",t:5,r:56,c:"US",k:0},{n:"Ángel Cabrera",t:5,r:57,c:"ARG",k:0},{n:"Fred Couples",t:5,r:58,c:"US",k:0},{n:"Mike Weir",t:5,r:59,c:"CAN",k:0},{n:"Vijay Singh",t:5,r:60,c:"FJI",k:0},{n:"J.J. Spaun",t:5,r:61,c:"US",k:0},{n:"Gary Woodland",t:5,r:62,c:"US",k:0},{n:"Kristoffer Reitan",t:5,r:67,c:"NOR",k:1},{n:"Jackson Herrington",t:5,r:68,c:"US",k:1,am:1},{n:"Mason Howell",t:5,r:69,c:"US",k:1,am:1},{n:"Ethan Fang",t:5,r:70,c:"AUS",k:1,am:1},{n:"Fifa Laopakdee",t:5,r:71,c:"THA",k:1,am:1},{n:"Mateo Pulcini",t:5,r:72,c:"ARG",k:1,am:1},{n:"Brandon Holtz",t:5,r:73,c:"US",k:1,am:1},{n:"Kataoka Ren",t:5,r:74,c:"JPN",k:1}
+];
+
+const FL={US:"🇺🇸",NIR:"🇬🇧",SWE:"🇸🇪",ESP:"🇪🇸",JPN:"🇯🇵",NOR:"🇳🇴",ENG:"🏴\u200D",IRL:"🇮🇪",CAN:"🇨🇦",KOR:"🇰🇷",SCO:"🏴\u200D",AUT:"🇦🇹",AUS:"🇦🇺",NZL:"🇳🇿",COL:"🇨🇴",RSA:"🇿🇦",CHN:"🇨🇳",MEX:"🇲🇽",ARG:"🇦🇷",FJI:"🇫🇯",DEN:"🇩🇰",THA:"🇹🇭"};
+const TL={1:"Elite",2:"Contenders",3:"Mid-Tier",4:"Sleepers",5:"Longshots"};
+const TC={1:"#C9A84C",2:"#8B9F6B",3:"#6B8BA4",4:"#9B7EB4",5:"#B47E7E"};
+const TM={1:2,2:2,3:3,4:3,5:2};
+const PK=6;
+const EU=["ENG","SCO","NIR","IRL","ESP","SWE","NOR","AUT","DEN"];
+const SB=[
+  {id:"winner",lb:"🏆 Green Jacket Winner",ds:"Who wins the Masters?",tp:"golfer",bn:-5,pn:0},
+  {id:"r1leader",lb:"⛳ First Round Leader",ds:"Who leads after Round 1?",tp:"golfer",bn:-3,pn:0},
+  {id:"besteuropean",lb:"🇪🇺 Best European",ds:"Top European finisher?",tp:"golfer_eu",bn:-2,pn:0},
+  {id:"rookietop10",lb:"🌟 Rookie Top 10",ds:"Name a rookie who finishes top 10",tp:"golfer_rookie",bn:-4,pn:2},
+  {id:"holeinone",lb:"🕳️ Ace at Amen Corner",ds:"Hole-in-one on 12 or 16?",tp:"yesno",bn:-2,pn:1},
+  {id:"playoff",lb:"⚡ Playoff?",ds:"Will the Masters go to a playoff?",tp:"yesno",bn:-3,pn:1},
+];
+
+const gf=n=>F.find(x=>x.n===n);
+const fm=s=>s===0?"E":s>0?"+"+s:""+s;
+const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const q=s=>s.replace(/'/g,"\\'");
+
+// =============================================
+// STATE
+// =============================================
+let S={
+  scr:'home',gid:null,pname:'',grp:null,
+  players:[],gscores:{},cuts:[],sbresults:{},
+  picks:[],sbets:{},jcode:'',
+  tf:0,sq:'',tab:'picks',err:'',
+  loading:false,swapFrom:null,detail:null
+};
+let _rt=null;
+
+// Persist name
+try{S.pname=localStorage.getItem('mf26_name')||''}catch(e){}
+
+function saveName(){try{localStorage.setItem('mf26_name',S.pname)}catch(e){}}
+
+function toast(msg,ok){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.style.background=ok?'rgba(139,159,107,.9)':'rgba(224,112,112,.9)';
+  t.style.color='#fff';t.style.opacity='1';
+  setTimeout(()=>{t.style.opacity='0'},2500);
+}
+
+// =============================================
+// DB OPS
+// =============================================
+async function createGroup(){
+  const nm=S.pname.trim();
+  if(!nm){S.err='Enter your name';render();return}
+  S.loading=true;render();
+  const{data:grp,error:e1}=await db.from('groups').insert({commissioner:nm}).select().single();
+  if(e1||!grp){S.err='Failed: '+((e1&&e1.message)||'unknown');S.loading=false;render();return}
+  await db.from('players').insert({group_id:grp.id,name:nm});
+  S.gid=grp.id;S.grp=grp;S.loading=false;S.scr='lobby';S.err='';
+  saveName();await loadGroup(grp.id);render();
+  toast('Group created!',true);
+}
+
+async function joinGroup(){
+  const nm=S.pname.trim(),code=S.jcode.trim().toLowerCase();
+  if(!nm){S.err='Enter your name';render();return}
+  if(!code){S.err='Enter group code';render();return}
+  S.loading=true;render();
+  const{data:grp}=await db.from('groups').select('*').eq('id',code).single();
+  if(!grp){S.err='Group not found';S.loading=false;render();return}
+  const{data:ex}=await db.from('players').select('*').eq('group_id',code).ilike('name',nm);
+  if(!ex||!ex.length){
+    if(grp.draft_locked){S.err='Draft is locked';S.loading=false;render();return}
+    const{error:e2}=await db.from('players').insert({group_id:code,name:nm});
+    if(e2){S.err='Join failed: '+e2.message;S.loading=false;render();return}
+  }
+  S.gid=code;S.grp=grp;S.loading=false;S.scr='lobby';S.err='';
+  saveName();await loadGroup(code);render();
+  toast('Joined!',true);
+}
+
+async function loadGroup(gid){
+  const{data:grp}=await db.from('groups').select('*').eq('id',gid).single();
+  if(!grp)return;
+  S.grp=grp;
+  const{data:pl}=await db.from('players').select('*').eq('group_id',gid).order('joined_at');
+  S.players=pl||[];
+  const{data:sc}=await db.from('golfer_scores').select('*').eq('group_id',gid);
+  S.gscores={};S.cuts=[];
+  (sc||[]).forEach(r=>{S.gscores[r.golfer_name]=r.score;if(r.is_cut)S.cuts.push(r.golfer_name)});
+  const{data:sr}=await db.from('side_bet_results').select('*').eq('group_id',gid);
+  S.sbresults={};
+  (sr||[]).forEach(r=>{if(r.result)S.sbresults[r.bet_id]=r.result});
+  render();
+}
+
+async function submitPicks(){
+  const err=validate(S.picks);
+  if(err){S.err=err;render();return}
+  const me=getMe();if(!me)return;
+  const{error:e}=await db.from('players').update({picks:S.picks,side_bets:S.sbets}).eq('id',me.id);
+  if(e){toast('Save failed',false);return}
+  S.scr='lobby';S.err='';await loadGroup(S.gid);render();
+  toast('Picks submitted!',true);
+}
+
+async function lockDraft(){
+  await db.from('groups').update({draft_locked:true}).eq('id',S.gid);
+  await loadGroup(S.gid);render();
+  toast('Draft locked!',true);
+}
+
+async function toggleSwap(){
+  const nv=!S.grp.swap_window_open;
+  await db.from('groups').update({swap_window_open:nv}).eq('id',S.gid);
+  await loadGroup(S.gid);render();
+  toast(nv?'Swap window opened':'Swap window closed',true);
+}
+
+async function doSwap(oldN,newN){
+  const me=getMe();
+  if(!me||me.swap_used){S.err='Swap already used';render();return}
+  const np=me.picks.map(n=>n===oldN?newN:n);
+  await db.from('players').update({picks:np,swap_used:true}).eq('id',me.id);
+  S.swapFrom=null;S.scr='lobby';await loadGroup(S.gid);render();
+  toast('Swap done!',true);
+}
+
+async function saveScores(){
+  const gid=S.gid;
+  const allG=[...new Set(S.players.flatMap(p=>p.picks||[]))];
+  // Batch upserts
+  const rows=allG.map(n=>({group_id:gid,golfer_name:n,score:S.gscores[n]||0,is_cut:S.cuts.includes(n)}));
+  if(rows.length){
+    const{error:e}=await db.from('golfer_scores').upsert(rows,{onConflict:'group_id,golfer_name'});
+    if(e){toast('Score save failed: '+e.message,false);return}
+  }
+  const sbRows=Object.entries(S.sbresults).filter(([,v])=>v).map(([k,v])=>({group_id:gid,bet_id:k,result:v}));
+  if(sbRows.length){
+    await db.from('side_bet_results').upsert(sbRows,{onConflict:'group_id,bet_id'});
+  }
+  S.scr='lobby';await loadGroup(gid);render();
+  toast('Scores saved!',true);
+}
+
+// =============================================
+// LOGIC
+// =============================================
+function getMe(){return S.players.find(p=>p.name.toLowerCase()===S.pname.trim().toLowerCase())}
+function isComm(){return S.grp?.commissioner?.toLowerCase()===S.pname.trim().toLowerCase()}
+
+function validate(picks){
+  if(picks.length!==PK)return`Pick exactly ${PK} golfers`;
+  const us=picks.filter(n=>gf(n)?.c==='US').length;
+  if(us<2)return'Need at least 2 Americans 🇺🇸';
+  if(picks.length-us<1)return'Need at least 1 international 🌍';
+  if(!picks.some(n=>gf(n)?.k))return'Need at least 1 rookie 🌟';
+  for(const[t,mx]of Object.entries(TM)){
+    if(picks.filter(n=>gf(n)?.t===parseInt(t)).length>mx)return`Max ${mx} from ${TL[t]}`;
+  }
+  return null;
+}
+
+function togglePick(name){
+  if(S.picks.includes(name)){S.picks=S.picks.filter(n=>n!==name);S.err='';render();return}
+  if(S.picks.length>=PK){S.err=`Max ${PK} picks`;render();return}
+  const gl=gf(name);
+  const tc=S.picks.filter(n=>gf(n)?.t===gl.t).length;
+  if(tc>=TM[gl.t]){S.err=`Max ${TM[gl.t]} from ${TL[gl.t]}`;render();return}
+  S.picks.push(name);S.err='';render();
+}
+
+function calcBonus(p){
+  const sb2=p.side_bets||{};
+  let b=0;
+  for(const bet of SB){
+    const res=S.sbresults[bet.id];
+    if(!res||!sb2[bet.id])continue;
+    if(bet.tp==='yesno')b+=sb2[bet.id]===res?bet.bn:bet.pn;
+    else b+=sb2[bet.id].toLowerCase()===res.toLowerCase()?bet.bn:bet.pn;
+  }
+  return b;
+}
+
+function getBoard(){
+  return S.players.map(p=>{
+    const ps=(p.picks||[]).map(n=>{
+      const ic=S.cuts.includes(n);
+      return{n,sc:ic?10:(S.gscores[n]||0),cut:ic};
+    });
+    const b4=[...ps].sort((a,b)=>a.sc-b.sc).slice(0,4);
+    const b4t=b4.reduce((a,b)=>a+b.sc,0);
+    const sb2=calcBonus(p);
+    return{...p,ps,b4t,sb2,fin:b4t+sb2};
+  }).sort((a,b)=>a.fin-b.fin);
+}
+
+function startPoll(){
+  clearInterval(_rt);
+  _rt=setInterval(()=>{if(S.gid&&(S.scr==='lobby'||S.scr==='leaderboard'))loadGroup(S.gid)},8000);
+}
+function stopPoll(){clearInterval(_rt)}
+
+// =============================================
+// RENDER
+// =============================================
+function render(){
+  const $=document.getElementById('app');
+  const me=getMe();const comm=isComm();
+  let h='';
+
+  // Header
+  h+=`<div style="padding:20px 16px 12px;text-align:center">
+    <div class="pf" style="font-size:10px;letter-spacing:5px;text-transform:uppercase;color:#C9A84C;opacity:.7">Augusta National · April 9–12</div>
+    <h1 class="pf" style="font-size:26px;font-weight:800;background:linear-gradient(135deg,#C9A84C 20%,#f0dfa0 50%,#C9A84C 80%);background-size:200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 4s linear infinite;margin-top:2px">Masters Fantasy 2026</h1>
+  </div><div class="wrap">`;
+
+  // ========== HOME ==========
+  if(S.scr==='home'){
+    h+=`<div class="col gap14 fu">
+      <div class="cd" style="padding:20px">
+        <label class="fs12 fw6 muted" style="display:block;margin-bottom:6px">Your Name</label>
+        <input type="text" id="iname" value="${esc(S.pname)}" placeholder="Enter your name" oninput="S.pname=this.value">
+      </div>
+      <div class="cd" style="padding:20px">
+        <h3 class="pf" style="font-size:17px;margin-bottom:12px">Create a Group</h3>
+        <button class="bt bg w100" onclick="createGroup()" ${S.loading?'disabled':''}>Create Group</button>
+      </div>
+      <div class="tac fs12 muted3">— or join existing —</div>
+      <div class="cd" style="padding:20px">
+        <h3 class="pf" style="font-size:17px;margin-bottom:8px">Join a Group</h3>
+        <input type="text" id="icode" value="${esc(S.jcode)}" placeholder="Enter group code" oninput="S.jcode=this.value" style="margin-bottom:10px">
+        <button class="bt bo w100" onclick="joinGroup()" ${S.loading?'disabled':''}>Join Group</button>
+      </div>
+      <div class="cd" style="padding:18px">
+        <h4 class="pf fs14 gold" style="margin-bottom:8px">How It Works</h4>
+        <div class="fs12 muted" style="line-height:1.9">
+          <b>Draft ${PK} golfers</b> with constraints:<br>
+          &nbsp;&nbsp;🇺🇸 At least 2 Americans<br>
+          &nbsp;&nbsp;🌍 At least 1 international<br>
+          &nbsp;&nbsp;🌟 At least 1 Masters rookie<br>
+          &nbsp;&nbsp;Tier limits: max 2 Elite/Contenders/Longshots, max 3 others<br><br>
+          <b>Side bets</b> for bonus/penalty strokes<br>
+          <b>Best 4 of ${PK}</b> scores + side bet bonuses = final<br>
+          <b>Weekend swap:</b> replace 1 MC'd golfer after the cut<br>
+          MC/WD golfers score +10
+        </div>
+      </div>`;
+    if(S.err)h+=`<div class="red fs13 tac">${esc(S.err)}</div>`;
+    h+=`</div>`;
+  }
+
+  // ========== LOBBY ==========
+  else if(S.scr==='lobby'&&S.grp){
+    startPoll();
+    h+=`<div class="col gap14 fu">
+      <div class="cd row" style="padding:18px;justify-content:space-between;align-items:center">
+        <div><div class="fs11 muted2">Group Code — share with friends</div>
+        <div class="pf fw7 gold" style="font-size:22px;letter-spacing:3px">${esc(S.gid)}</div></div>
+        <button class="bt bo bs" onclick="navigator.clipboard.writeText('${esc(S.gid)}');toast('Copied!',true)">Copy</button>
+      </div>
+      <div class="cd" style="padding:18px">
+        <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">
+          <h3 class="pf" style="font-size:15px">Players (${S.players.length})</h3>
+          <div class="row gap6">
+            ${S.grp.draft_locked?'<span class="fs10" style="color:#e07070;background:rgba(224,112,112,.1);padding:2px 8px;border-radius:10px">LOCKED</span>':''}
+            ${S.grp.swap_window_open?'<span class="fs10" style="color:#6B8BA4;background:rgba(107,139,164,.1);padding:2px 8px;border-radius:10px">SWAP</span>':''}
+          </div>
+        </div>`;
+    S.players.forEach((p,i)=>{
+      const pc=(p.picks||[]).length;
+      h+=`<div class="row" style="justify-content:space-between;align-items:center;padding:7px 0;${i<S.players.length-1?'border-bottom:1px solid rgba(255,255,255,.04)':''}">
+        <div class="row" style="align-items:center;gap:8px">
+          <div style="width:26px;height:26px;border-radius:50%;background:hsl(${i*55+20},35%,32%);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">${p.name.charAt(0).toUpperCase()}</div>
+          <span class="fs13 fw6">${esc(p.name)}</span>
+          ${p.name===S.grp.commissioner?'<span class="gold" style="font-size:9px">COMM</span>':''}
+        </div>
+        <div class="row" style="align-items:center;gap:6px">
+          <span class="fs11" style="color:${pc===PK?'#8B9F6B':'rgba(232,224,208,.35)'}">${pc}/${PK}</span>
+          ${Object.keys(p.side_bets||{}).length?'<span style="font-size:9px;color:#9B7EB4">+bets</span>':''}
+        </div></div>`;
+    });
+    h+=`</div><div class="row gap8" style="flex-wrap:wrap">`;
+    if(!S.grp.draft_locked){
+      h+=`<button class="bt bg" style="flex:1" onclick="S.picks=${JSON.stringify((me?.picks)||[]).replace(/"/g,'&quot;')};S.sbets=${JSON.stringify((me?.side_bets)||{}).replace(/"/g,'&quot;')};S.tab='picks';S.scr='draft';S.err='';render()">Make Picks</button>`;
+    }
+    h+=`<button class="bt bo" style="flex:1" onclick="S.scr='leaderboard';loadGroup(S.gid)">Leaderboard</button></div>`;
+
+    // Swap
+    const myCut=(me?.picks||[]).filter(n=>S.cuts.includes(n));
+    if(S.grp.swap_window_open&&S.grp.draft_locked&&me&&!me.swap_used&&myCut.length>0){
+      h+=`<button class="bt bo w100" style="border-color:#6B8BA4;color:#6B8BA4" onclick="S.scr='swap';S.swapFrom=null;render()">🔄 Weekend Swap (${myCut.length} MC'd)</button>`;
+    }
+
+    // Commissioner
+    if(comm){
+      h+=`<div class="cd" style="padding:16px">
+        <div class="fs12 fw6 muted" style="margin-bottom:10px">Commissioner Controls</div>
+        <div class="row gap8" style="flex-wrap:wrap">`;
+      if(!S.grp.draft_locked)h+=`<button class="bt bo bs" style="border-color:#e07070;color:#e07070" onclick="if(confirm('Lock draft? Irreversible.'))lockDraft()">Lock Draft</button>`;
+      if(S.grp.draft_locked){
+        h+=`<button class="bt bo bs" onclick="toggleSwap()">${S.grp.swap_window_open?'Close':'Open'} Swap</button>`;
+        h+=`<button class="bt bo bs" onclick="S.scr='scores';render()">Update Scores</button>`;
+      }
+      h+=`</div></div>`;
+    }
+    h+=`<button class="bt bo bs" style="align-self:center;opacity:.4;font-size:11px" onclick="stopPoll();S.scr='home';S.gid=null;S.grp=null;S.players=[];S.err='';render()">Leave Group</button>`;
+    h+=`</div>`;
+  }
+
+  // ========== DRAFT ==========
+  else if(S.scr==='draft'){
+    const checks=[];
+    if(S.picks.length>0){
+      const us=S.picks.filter(n=>gf(n)?.c==='US').length;
+      checks.push({l:`🇺🇸 ${us}/2`,ok:us>=2});
+      checks.push({l:`🌍 ${S.picks.length-us}/1`,ok:S.picks.length-us>=1});
+      checks.push({l:`🌟 ${S.picks.filter(n=>gf(n)?.k).length}/1`,ok:S.picks.some(n=>gf(n)?.k)});
+      checks.push({l:`${S.picks.length}/${PK}`,ok:S.picks.length===PK});
+    }
+    h+=`<div class="col gap10 fu">
+      <div class="row gap8" style="align-items:center">
+        <button class="bt bo bs" onclick="S.scr='lobby';S.err='';render()">← Back</button>
+        <button class="tb ${S.tab==='picks'?'a':''}" onclick="S.tab='picks';render()">Golfers</button>
+        <button class="tb ${S.tab==='sidebets'?'a':''}" onclick="S.tab='sidebets';render()">Side Bets</button>
+        <div style="margin-left:auto;font-size:14px;font-weight:600"><span class="gold">${S.picks.length}</span><span class="muted3">/${PK}</span></div>
+      </div>`;
+
+    if(S.tab==='picks'){
+      if(checks.length){
+        h+=`<div class="cd row" style="padding:10px 12px;flex-wrap:wrap;gap:8px">`;
+        checks.forEach(c=>{
+          h+=`<div style="display:flex;align-items:center;gap:4px;font-size:12px">
+            <span style="width:16px;height:16px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;background:${c.ok?'rgba(139,159,107,.2)':'rgba(232,224,208,.06)'};color:${c.ok?'#8B9F6B':'rgba(232,224,208,.3)'}">${c.ok?'✓':'○'}</span>
+            <span style="color:${c.ok?'#8B9F6B':'rgba(232,224,208,.45)'}">${c.l}</span></div>`;
+        });
+        h+=`</div>`;
+      }
+      if(S.picks.length){
+        h+=`<div style="display:flex;flex-wrap:wrap;gap:5px">`;
+        S.picks.forEach(name=>{
+          const gl=gf(name);
+          h+=`<span class="pill" onclick="togglePick('${q(name)}')" style="background:${TC[gl?.t]}18;border:1px solid ${TC[gl?.t]}35;color:${TC[gl?.t]}">${FL[gl?.c]||''} ${name.split(' ').pop()} ${gl?.k?'🌟':''} ×</span>`;
+        });
+        h+=`</div>`;
+      }
+      h+=`<input type="text" value="${esc(S.sq)}" placeholder="Search golfers..." oninput="S.sq=this.value;render()" style="font-size:13px">`;
+      h+=`<div class="row gap6" style="flex-wrap:wrap;overflow-x:auto">
+        <span class="tb ${S.tf===0?'a':''}" onclick="S.tf=0;render()">All</span>`;
+      [1,2,3,4,5].forEach(t=>{
+        h+=`<span class="tb ${S.tf===t?'a':''}" onclick="S.tf=${t};render()" ${S.tf===t?`style="border-color:${TC[t]}55;color:${TC[t]}"`:''}>${TL[t]}</span>`;
+      });
+      h+=`</div>`;
+      const ff=F.filter(gl=>(S.tf===0||gl.t===S.tf)&&(!S.sq||gl.n.toLowerCase().includes(S.sq.toLowerCase())));
+      h+=`<div class="cd" style="padding:4px;max-height:380px;overflow-y:auto">`;
+      ff.forEach(gl=>{
+        const sel=S.picks.includes(gl.n);
+        h+=`<div class="gr ${sel?'sel':''}" onclick="togglePick('${q(gl.n)}')">
+          <div style="width:7px;height:7px;border-radius:50%;background:${TC[gl.t]};flex-shrink:0"></div>
+          <span class="fs14" style="flex-shrink:0">${FL[gl.c]||'🏳️'}</span>
+          <div style="flex:1;min-width:0">
+            <div class="fs13" style="font-weight:${sel?600:400};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(gl.n)} ${gl.k?'<span style="font-size:10px;color:#9B7EB4">ROOKIE</span>':''} ${gl.am?'<span style="font-size:10px;color:#6B8BA4">AM</span>':''}</div>
+            <div class="fs11 muted2">#${gl.r} · ${TL[gl.t]}</div>
+          </div>${sel?'<span class="gold fs14" style="flex-shrink:0">✓</span>':''}</div>`;
+      });
+      h+=`</div>`;
+    }
+
+    if(S.tab==='sidebets'){
+      h+=`<div class="col gap10">`;
+      SB.forEach(bet=>{
+        h+=`<div class="cd" style="padding:14px">
+          <div class="fs14 fw6" style="margin-bottom:2px">${bet.lb}</div>
+          <div class="fs11 muted" style="margin-bottom:8px">${bet.ds} <span class="green">(${fm(bet.bn)} if right</span>${bet.pn?`, <span class="red">+${bet.pn} if wrong</span>`:''}<span class="green">)</span></div>`;
+        if(bet.tp==='yesno'){
+          h+=`<div class="row gap8">`;
+          ['yes','no'].forEach(v=>{
+            h+=`<button class="tb ${S.sbets[bet.id]===v?'a':''}" style="flex:1;text-transform:capitalize" onclick="S.sbets['${bet.id}']='${v}';render()">${v}</button>`;
+          });
+          h+=`</div>`;
+        }else{
+          const opts=bet.tp==='golfer_eu'?F.filter(x=>EU.includes(x.c)):bet.tp==='golfer_rookie'?F.filter(x=>x.k):F;
+          h+=`<select onchange="S.sbets['${bet.id}']=this.value;render()" style="padding:9px 12px;font-size:13px"><option value="">Select...</option>`;
+          opts.forEach(x=>{h+=`<option value="${esc(x.n)}" ${S.sbets[bet.id]===x.n?'selected':''}>${FL[x.c]||''} ${esc(x.n)}</option>`});
+          h+=`</select>`;
+        }
+        h+=`</div>`;
+      });
+      h+=`</div>`;
+    }
+
+    if(S.err)h+=`<div class="red fs12 tac" style="margin-top:4px">${esc(S.err)}</div>`;
+    if(S.picks.length===PK)h+=`<button class="bt bg w100" onclick="submitPicks()">Submit Picks & Side Bets</button>`;
+    h+=`</div>`;
+  }
+
+  // ========== SWAP ==========
+  else if(S.scr==='swap'){
+    const me2=getMe();
+    const myCut=(me2?.picks||[]).filter(n=>S.cuts.includes(n));
+    const allD=S.players.flatMap(p=>p.picks||[]);
+    h+=`<div class="col gap12 fu">
+      <button class="bt bo bs" style="align-self:flex-start" onclick="S.scr='lobby';render()">← Back</button>
+      <div class="cd" style="padding:18px">
+        <h3 class="pf" style="font-size:16px;margin-bottom:8px">🔄 Weekend Swap</h3>
+        <div class="fs12 muted" style="margin-bottom:14px">Pick 1 MC'd golfer to drop, then choose any undrafted golfer still playing.</div>
+        <div class="fs12 fw6 muted" style="margin-bottom:6px">Your MC'd golfers:</div>`;
+    myCut.forEach(n=>{
+      h+=`<div class="gr ${S.swapFrom===n?'sel':''}" onclick="S.swapFrom='${q(n)}';render()">
+        <span class="fs13">${esc(n)}</span><span class="fs11 red" style="margin-left:auto">MC +10</span></div>`;
+    });
+    if(S.swapFrom){
+      h+=`<div class="fs12 fw6 muted" style="margin-top:14px;margin-bottom:6px">Replace ${S.swapFrom.split(' ').pop()} with:</div>
+        <div style="max-height:250px;overflow-y:auto">`;
+      F.filter(gl=>!allD.includes(gl.n)&&!S.cuts.includes(gl.n)).forEach(gl=>{
+        h+=`<div class="gr" onclick="doSwap('${q(S.swapFrom)}','${q(gl.n)}')">
+          <span>${FL[gl.c]||''}</span><span class="fs13">${esc(gl.n)}</span>
+          <span class="fs10 muted2" style="margin-left:auto">${TL[gl.t]}</span></div>`;
+      });
+      h+=`</div>`;
+    }
+    if(S.err)h+=`<div class="red fs12 tac" style="margin-top:8px">${esc(S.err)}</div>`;
+    h+=`</div></div>`;
+  }
+
+  // ========== LEADERBOARD ==========
+  else if(S.scr==='leaderboard'&&S.grp){
+    startPoll();
+    h+=`<div class="col gap12 fu">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <button class="bt bo bs" onclick="S.scr='lobby';render()">← Back</button>
+        <h3 class="pf" style="font-size:17px">Leaderboard</h3>
+        <button class="bt bo bs" onclick="loadGroup(S.gid)">↻</button>
+      </div>`;
+    if(!S.grp.draft_locked){
+      h+=`<div class="cd tac muted fs13" style="padding:16px">Draft not locked yet. Picks hidden.</div>`;
+    }else{
+      const board=getBoard();
+      h+=`<div class="cd" style="overflow:hidden">
+        <div class="lr" style="font-size:10px;font-weight:600;color:rgba(232,224,208,.35);text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid rgba(255,255,255,.08)">
+          <div>#</div><div>Player</div><div class="tar">Best4</div><div class="tar">Bets</div><div class="tar">Final</div></div>`;
+      board.forEach((p,i)=>{
+        const bg=i===0?'rgba(201,168,76,.15)':'rgba(255,255,255,.04)';
+        const cl=i===0?'#C9A84C':i===1?'#c0c0c0':i===2?'#b4824e':'rgba(232,224,208,.4)';
+        h+=`<div class="lr" style="cursor:pointer" onclick="S.detail=S.detail==='${q(p.name)}'?null:'${q(p.name)}';render()">
+          <div><div class="pb" style="background:${bg};color:${cl}">${i+1}</div></div>
+          <div>
+            <div class="fs13 fw6">${esc(p.name)}</div>
+            <div class="fs10 muted2" style="margin-top:1px;line-height:1.4">`;
+        p.ps.forEach(ps=>{
+          const gl=gf(ps.n);
+          h+=`<span style="margin-right:5px;${ps.cut?'opacity:.4;text-decoration:line-through':''}">${FL[gl?.c]||''}${ps.n.split(' ').pop()} (${fm(ps.sc)})</span>`;
+        });
+        h+=`</div>`;
+        // Detail expand
+        if(S.detail===p.name){
+          h+=`<div style="margin-top:8px;padding:8px;background:rgba(255,255,255,.03);border-radius:8px;font-size:11px">`;
+          p.ps.forEach(ps=>{
+            h+=`<div class="row" style="justify-content:space-between;padding:2px 0;${ps.cut?'opacity:.5':''}">
+              <span>${esc(ps.n)} ${ps.cut?'(MC)':''}</span>
+              <span style="color:${ps.sc<0?'#8B9F6B':ps.sc>0?'#e07070':'inherit'}">${fm(ps.sc)}</span></div>`;
+          });
+          const sb2=p.side_bets||{};
+          if(Object.keys(sb2).length){
+            h+=`<div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.06)">
+              <div class="fw6 muted" style="margin-bottom:3px;font-size:11px">Side Bets:</div>`;
+            Object.entries(sb2).forEach(([id,val])=>{
+              const def=SB.find(b=>b.id===id);
+              const res=S.sbresults[id];
+              const won=res&&val.toLowerCase()===res.toLowerCase();
+              h+=`<div class="row" style="justify-content:space-between;padding:2px 0">
+                <span>${def?.lb?.split(' ').slice(1).join(' ')||id}: ${esc(val)}</span>
+                ${res?`<span style="color:${won?'#8B9F6B':'#e07070'}">${won?'✓':'✗'}</span>`:'<span class="muted2">pending</span>'}
+              </div>`;
+            });
+            h+=`</div>`;
+          }
+          h+=`</div>`;
+        }
+        h+=`</div>
+          <div class="tar fw6 fs14" style="color:${p.b4t<0?'#8B9F6B':p.b4t>0?'#e07070':'inherit'}">${fm(p.b4t)}</div>
+          <div class="tar fs12" style="color:${p.sb2<0?'#8B9F6B':p.sb2>0?'#e07070':'rgba(232,224,208,.4)'}">${fm(p.sb2)}</div>
+          <div class="tar fw7" style="font-size:15px;color:${p.fin<0?'#8B9F6B':p.fin>0?'#e07070':'#C9A84C'}">${fm(p.fin)}</div>
+        </div>`;
+      });
+      h+=`</div>`;
+    }
+    h+=`</div>`;
+  }
+
+  // ========== SCORES (Commissioner) ==========
+  else if(S.scr==='scores'&&S.grp){
+    const allG=[...new Set(S.players.flatMap(p=>p.picks||[]))].sort();
+    h+=`<div class="col gap10 fu">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <button class="bt bo bs" onclick="S.scr='lobby';render()">← Back</button>
+        <h3 class="pf" style="font-size:16px">Commissioner Panel</h3>
+        <div></div>
+      </div>
+      <div class="cd" style="padding:14px">
+        <h4 class="fs13 fw6 muted" style="margin-bottom:6px">Golfer Scores (vs par)</h4>
+        <div class="fs11 muted2" style="margin-bottom:8px">Enter total vs par. Tick MC for missed cut.</div>
+        <div style="max-height:320px;overflow-y:auto">`;
+    allG.forEach(name=>{
+      h+=`<div class="row" style="justify-content:space-between;align-items:center;padding:6px 4px;border-bottom:1px solid rgba(255,255,255,.03)">
+        <div style="flex:1"><span class="fs13">${esc(name)}</span>${S.cuts.includes(name)?'<span class="fs10 red" style="margin-left:6px">MC</span>':''}</div>
+        <div class="row" style="align-items:center;gap:6px">
+          <input type="number" value="${S.gscores[name]||0}" onchange="S.gscores['${q(name)}']=parseInt(this.value)||0" style="width:56px;padding:5px 6px;text-align:center;font-size:13px">
+          <label class="fs10 muted row" style="align-items:center;gap:3px;cursor:pointer">
+            <input type="checkbox" ${S.cuts.includes(name)?'checked':''} onchange="if(this.checked){if(!S.cuts.includes('${q(name)}'))S.cuts.push('${q(name)}')}else{S.cuts=S.cuts.filter(n=>n!=='${q(name)}')}">MC</label>
+        </div></div>`;
+    });
+    h+=`</div></div>
+      <div class="cd" style="padding:14px">
+        <h4 class="fs13 fw6 muted" style="margin-bottom:8px">Side Bet Results</h4>`;
+    SB.forEach(bet=>{
+      h+=`<div style="margin-bottom:10px"><div class="fs12 fw6" style="margin-bottom:4px">${bet.lb}</div>`;
+      if(bet.tp==='yesno'){
+        h+=`<div class="row gap6">`;
+        ['yes','no',''].forEach(v=>{
+          h+=`<button class="tb ${(S.sbresults[bet.id]||'')===(v)?'a':''}" onclick="S.sbresults['${bet.id}']='${v}';render()" style="font-size:11px">${v||'Clear'}</button>`;
+        });
+        h+=`</div>`;
+      }else{
+        h+=`<input type="text" value="${esc(S.sbresults[bet.id]||'')}" onchange="S.sbresults['${bet.id}']=this.value" placeholder="Golfer name (exact match)" style="font-size:12px;padding:7px 10px">`;
+      }
+      h+=`</div>`;
+    });
+    h+=`</div><button class="bt bg w100" onclick="saveScores()">Save All</button></div>`;
+  }
+
+  h+=`</div>`; // .wrap
+  $.innerHTML=h;
+}
+
+// Init
+render();
+</script>
+</body>
+</html>
