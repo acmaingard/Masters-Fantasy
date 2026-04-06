@@ -207,6 +207,41 @@ async function saveScores(){
   toast('Scores saved!',true);
 }
 
+// Fetch live scores from our API proxy
+async function fetchLiveScores(){
+  toast('Fetching live scores...',true);
+  try{
+    const r=await fetch('/api/scores');
+    if(!r.ok){toast('Scores API error',false);return}
+    const d=await r.json();
+    if(!d.success||!d.scores?.length){toast(d.error||'No scores yet — tournament may not have started',false);return}
+    // Match ESPN/masters.com names to our drafted golfers
+    const drafted=[...new Set(S.players.flatMap(p=>p.picks||[]))];
+    const matched=[];const unmatched=[];
+    for(const ds of d.scores){
+      // Try exact match first
+      let myName=drafted.find(n=>n.toLowerCase()===ds.name.toLowerCase());
+      // Try last-name match
+      if(!myName){
+        const last=ds.name.split(' ').pop().toLowerCase();
+        myName=drafted.find(n=>n.split(' ').pop().toLowerCase()===last);
+      }
+      if(myName){
+        matched.push({golfer_name:myName,score:ds.score,is_cut:ds.is_cut});
+      }else{
+        unmatched.push(ds.name);
+      }
+    }
+    if(matched.length===0){toast('No matching golfers found',false);return}
+    // Write to Supabase
+    const rows=matched.map(m=>({group_id:'lamivoie',golfer_name:m.golfer_name,score:m.is_cut?10:m.score,is_cut:m.is_cut}));
+    const{error:e}=await db.from('golfer_scores').upsert(rows,{onConflict:'group_id,golfer_name'});
+    if(e){toast('DB update failed: '+e.message,false);return}
+    await loadGroup('lamivoie');render();
+    toast(`${matched.length} scores updated from ${d.source}`,true);
+  }catch(e){toast('Fetch failed: '+e.message,false)}
+}
+
 // =============================================
 // LOGIC
 // =============================================
@@ -358,7 +393,8 @@ function render(){
       if(!S.grp.draft_locked)h+=`<button class="bt bo bs" style="border-color:#e07070;color:#e07070" onclick="if(confirm('Lock draft? Irreversible.'))lockDraft()">Lock Draft</button>`;
       if(S.grp.draft_locked){
         h+=`<button class="bt bo bs" onclick="toggleSwap()">${S.grp.swap_window_open?'Close':'Open'} Swap</button>`;
-        h+=`<button class="bt bo bs" onclick="S.scr='scores';render()">Update Scores</button>`;
+        h+=`<button class="bt bo bs" onclick="S.scr='scores';render()">Manual Scores</button>`;
+        h+=`<button class="bt bo bs" style="border-color:#8B9F6B;color:#8B9F6B" onclick="fetchLiveScores()">⛳ Fetch Live</button>`;
       }
       h+=`</div></div>`;
     }
@@ -488,7 +524,7 @@ function render(){
       <div class="row" style="justify-content:space-between;align-items:center">
         <button class="bt bo bs" onclick="S.scr='lobby';render()">← Back</button>
         <h3 class="pf" style="font-size:17px">Leaderboard</h3>
-        <button class="bt bo bs" onclick="loadGroup(S.gid)">↻</button>
+        <div class="row gap6"><button class="bt bo bs" onclick="fetchLiveScores()" style="border-color:#8B9F6B;color:#8B9F6B">⛳ Live</button><button class="bt bo bs" onclick="loadGroup(S.gid)">↻</button></div>
       </div>`;
     if(!S.grp.draft_locked){
       h+=`<div class="cd tac muted fs13" style="padding:16px">Draft not locked yet. Picks hidden.</div>`;
