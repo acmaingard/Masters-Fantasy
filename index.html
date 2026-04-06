@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Masters Fantasy 2026 ⛳</title>
+<title>Lamivoie Fantasy Masters 2026 ⛳</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛳</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800;900&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -101,9 +101,9 @@ const q=s=>s.replace(/'/g,"\\'");
 // STATE
 // =============================================
 let S={
-  scr:'home',gid:null,pname:'',grp:null,
+  scr:'home',gid:'lamivoie',pname:'',grp:null,
   players:[],gscores:{},cuts:[],sbresults:{},
-  picks:[],sbets:{},jcode:'',
+  picks:[],sbets:{},
   tf:0,sq:'',tab:'picks',err:'',
   loading:false,swapFrom:null,detail:null
 };
@@ -125,34 +125,22 @@ function toast(msg,ok){
 // =============================================
 // DB OPS
 // =============================================
-async function createGroup(){
+async function enterPool(){
   const nm=S.pname.trim();
   if(!nm){S.err='Enter your name';render();return}
   S.loading=true;render();
-  const{data:grp,error:e1}=await db.from('groups').insert({commissioner:nm}).select().single();
-  if(e1||!grp){S.err='Failed: '+((e1&&e1.message)||'unknown');S.loading=false;render();return}
-  await db.from('players').insert({group_id:grp.id,name:nm});
-  S.gid=grp.id;S.grp=grp;S.loading=false;S.scr='lobby';S.err='';
-  saveName();await loadGroup(grp.id);render();
-  toast('Group created!',true);
-}
-
-async function joinGroup(){
-  const nm=S.pname.trim(),code=S.jcode.trim().toLowerCase();
-  if(!nm){S.err='Enter your name';render();return}
-  if(!code){S.err='Enter group code';render();return}
-  S.loading=true;render();
-  const{data:grp}=await db.from('groups').select('*').eq('id',code).single();
-  if(!grp){S.err='Group not found';S.loading=false;render();return}
-  const{data:ex}=await db.from('players').select('*').eq('group_id',code).ilike('name',nm);
+  // Check if already in the group
+  const{data:ex}=await db.from('players').select('*').eq('group_id','lamivoie').ilike('name',nm);
   if(!ex||!ex.length){
-    if(grp.draft_locked){S.err='Draft is locked';S.loading=false;render();return}
-    const{error:e2}=await db.from('players').insert({group_id:code,name:nm});
+    // Check if draft is locked before adding
+    const{data:grp}=await db.from('groups').select('*').eq('id','lamivoie').single();
+    if(grp&&grp.draft_locked){S.err='Draft is locked — ask Amédée to add you';S.loading=false;render();return}
+    const{error:e2}=await db.from('players').insert({group_id:'lamivoie',name:nm});
     if(e2){S.err='Join failed: '+e2.message;S.loading=false;render();return}
   }
-  S.gid=code;S.grp=grp;S.loading=false;S.scr='lobby';S.err='';
-  saveName();await loadGroup(code);render();
-  toast('Joined!',true);
+  S.loading=false;S.scr='lobby';S.err='';
+  saveName();await loadGroup('lamivoie');render();
+  toast('Welcome!',true);
 }
 
 async function loadGroup(gid){
@@ -288,28 +276,22 @@ function render(){
   // Header
   h+=`<div style="padding:20px 16px 12px;text-align:center">
     <div class="pf" style="font-size:10px;letter-spacing:5px;text-transform:uppercase;color:#C9A84C;opacity:.7">Augusta National · April 9–12</div>
-    <h1 class="pf" style="font-size:26px;font-weight:800;background:linear-gradient(135deg,#C9A84C 20%,#f0dfa0 50%,#C9A84C 80%);background-size:200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 4s linear infinite;margin-top:2px">Masters Fantasy 2026</h1>
+    <h1 class="pf" style="font-size:24px;font-weight:800;background:linear-gradient(135deg,#C9A84C 20%,#f0dfa0 50%,#C9A84C 80%);background-size:200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 4s linear infinite;margin-top:2px">Lamivoie Fantasy Masters</h1>
+    <div style="font-size:11px;color:rgba(232,224,208,.3);margin-top:4px">2026 · 91 Players · Best 4 of 6</div>
   </div><div class="wrap">`;
 
   // ========== HOME ==========
   if(S.scr==='home'){
     h+=`<div class="col gap14 fu">
-      <div class="cd" style="padding:20px">
-        <label class="fs12 fw6 muted" style="display:block;margin-bottom:6px">Your Name</label>
-        <input type="text" id="iname" value="${esc(S.pname)}" placeholder="Enter your name" oninput="S.pname=this.value">
-      </div>
-      <div class="cd" style="padding:20px">
-        <h3 class="pf" style="font-size:17px;margin-bottom:12px">Create a Group</h3>
-        <button class="bt bg w100" onclick="createGroup()" ${S.loading?'disabled':''}>Create Group</button>
-      </div>
-      <div class="tac fs12 muted3">— or join existing —</div>
-      <div class="cd" style="padding:20px">
-        <h3 class="pf" style="font-size:17px;margin-bottom:8px">Join a Group</h3>
-        <input type="text" id="icode" value="${esc(S.jcode)}" placeholder="Enter group code" oninput="S.jcode=this.value" style="margin-bottom:10px">
-        <button class="bt bo w100" onclick="joinGroup()" ${S.loading?'disabled':''}>Join Group</button>
+      <div class="cd" style="padding:24px;text-align:center">
+        <div style="font-size:40px;margin-bottom:8px">⛳</div>
+        <h3 class="pf" style="font-size:18px;margin-bottom:4px">Welcome to the Pool</h3>
+        <div class="fs12 muted" style="margin-bottom:16px">Enter your name to join or view your picks</div>
+        <input type="text" id="iname" value="${esc(S.pname)}" placeholder="Your name" oninput="S.pname=this.value" style="text-align:center;font-size:16px;margin-bottom:12px">
+        <button class="bt bg w100" onclick="enterPool()" ${S.loading?'disabled':''}>Enter</button>
       </div>
       <div class="cd" style="padding:18px">
-        <h4 class="pf fs14 gold" style="margin-bottom:8px">How It Works</h4>
+        <h4 class="pf fs14 gold" style="margin-bottom:8px">Rules</h4>
         <div class="fs12 muted" style="line-height:1.9">
           <b>Draft ${PK} golfers</b> with constraints:<br>
           &nbsp;&nbsp;🇺🇸 At least 2 Americans<br>
@@ -330,10 +312,10 @@ function render(){
   else if(S.scr==='lobby'&&S.grp){
     startPoll();
     h+=`<div class="col gap14 fu">
-      <div class="cd row" style="padding:18px;justify-content:space-between;align-items:center">
-        <div><div class="fs11 muted2">Group Code — share with friends</div>
-        <div class="pf fw7 gold" style="font-size:22px;letter-spacing:3px">${esc(S.gid)}</div></div>
-        <button class="bt bo bs" onclick="navigator.clipboard.writeText('${esc(S.gid)}');toast('Copied!',true)">Copy</button>
+      <div class="cd row" style="padding:14px 18px;justify-content:space-between;align-items:center">
+        <div><div class="fs13 fw6">Hi ${esc(S.pname)} 👋</div>
+        <div class="fs11 muted2">Lamivoie Fantasy Pool</div></div>
+        <button class="bt bo bs" onclick="navigator.clipboard.writeText(window.location.href);toast('Link copied!',true)">Share Link</button>
       </div>
       <div class="cd" style="padding:18px">
         <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">
@@ -380,7 +362,7 @@ function render(){
       }
       h+=`</div></div>`;
     }
-    h+=`<button class="bt bo bs" style="align-self:center;opacity:.4;font-size:11px" onclick="stopPoll();S.scr='home';S.gid=null;S.grp=null;S.players=[];S.err='';render()">Leave Group</button>`;
+    h+=`<button class="bt bo bs" style="align-self:center;opacity:.4;font-size:11px" onclick="stopPoll();S.scr='home';S.pname='';saveName();S.grp=null;S.players=[];S.err='';render()">Switch Player</button>`;
     h+=`</div>`;
   }
 
@@ -609,8 +591,8 @@ function render(){
   $.innerHTML=h;
 }
 
-// Init
-render();
+// Init — auto-enter if name is saved
+if(S.pname){enterPool()}else{render()}
 </script>
 </body>
 </html>
