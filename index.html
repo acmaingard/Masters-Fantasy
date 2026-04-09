@@ -105,7 +105,8 @@ let S={
   players:[],gscores:{},cuts:[],sbresults:{},
   picks:[],sbets:{},
   tf:0,sq:'',tab:'picks',err:'',
-  loading:false,swapFrom:null,detail:null
+  loading:false,swapFrom:null,detail:null,
+  liveBoard:null,liveBoardAt:null,liveLoading:false
 };
 let _rt=null;
 
@@ -215,13 +216,13 @@ async function fetchLiveScores(){
     if(!r.ok){toast('Scores API error',false);return}
     const d=await r.json();
     if(!d.success||!d.scores?.length){toast(d.error||'No scores yet — tournament may not have started',false);return}
+    // Cache full board for live view
+    S.liveBoard=d.scores;S.liveBoardAt=new Date();
     // Match ESPN/masters.com names to our drafted golfers
     const drafted=[...new Set(S.players.flatMap(p=>p.picks||[]))];
     const matched=[];const unmatched=[];
     for(const ds of d.scores){
-      // Try exact match first
       let myName=drafted.find(n=>n.toLowerCase()===ds.name.toLowerCase());
-      // Try last-name match
       if(!myName){
         const last=ds.name.split(' ').pop().toLowerCase();
         myName=drafted.find(n=>n.split(' ').pop().toLowerCase()===last);
@@ -233,13 +234,43 @@ async function fetchLiveScores(){
       }
     }
     if(matched.length===0){toast('No matching golfers found',false);return}
-    // Write to Supabase
     const rows=matched.map(m=>({group_id:'lamivoie',golfer_name:m.golfer_name,score:m.is_cut?10:m.score,is_cut:m.is_cut}));
     const{error:e}=await db.from('golfer_scores').upsert(rows,{onConflict:'group_id,golfer_name'});
     if(e){toast('DB update failed: '+e.message,false);return}
     await loadGroup('lamivoie');render();
     toast(`${matched.length} scores updated from ${d.source}`,true);
   }catch(e){toast('Fetch failed: '+e.message,false)}
+}
+
+// Fetch full Masters leaderboard for live view (no db write needed)
+async function fetchMastersBoard(silent){
+  if(S.liveLoading)return;
+  S.liveLoading=true;if(!silent)render();
+  try{
+    const r=await fetch('/api/scores');
+    const d=await r.json();
+    if(d.success&&d.scores?.length){
+      S.liveBoard=d.scores;S.liveBoardAt=new Date();
+      // Also write to db so pool leaderboard updates too
+      const drafted=[...new Set(S.players.flatMap(p=>p.picks||[]))];
+      const matched=[];
+      for(const ds of d.scores){
+        let myName=drafted.find(n=>n.toLowerCase()===ds.name.toLowerCase());
+        if(!myName){
+          const last=ds.name.split(' ').pop().toLowerCase();
+          myName=drafted.find(n=>n.split(' ').pop().toLowerCase()===last);
+        }
+        if(myName)matched.push({group_id:'lamivoie',golfer_name:myName,score:ds.is_cut?10:ds.score,is_cut:ds.is_cut});
+      }
+      if(matched.length){
+        await db.from('golfer_scores').upsert(matched,{onConflict:'group_id,golfer_name'});
+        await loadGroup('lamivoie');
+      }
+    }else if(!silent){
+      toast(d.error||'No scores yet',false);
+    }
+  }catch(e){if(!silent)toast('Fetch failed',false)}
+  S.liveLoading=false;render();
 }
 
 // =============================================
@@ -296,7 +327,11 @@ function getBoard(){
 
 function startPoll(){
   clearInterval(_rt);
-  _rt=setInterval(()=>{if(S.gid&&(S.scr==='lobby'||S.scr==='leaderboard'))loadGroup(S.gid)},8000);
+  _rt=setInterval(()=>{
+    if(!S.gid)return;
+    if(S.scr==='lobby'||S.scr==='leaderboard')loadGroup(S.gid);
+    if(S.scr==='masters')fetchMastersBoard(true);
+  },S.scr==='masters'?60000:8000);
 }
 function stopPoll(){clearInterval(_rt)}
 
@@ -375,9 +410,10 @@ function render(){
     });
     h+=`</div><div class="row gap8" style="flex-wrap:wrap">`;
     if(!S.grp.draft_locked){
-      h+=`<button class="bt bg" style="flex:1" onclick="S.picks=${JSON.stringify((me?.picks)||[]).replace(/"/g,'&quot;')};S.sbets=${JSON.stringify((me?.side_bets)||{}).replace(/"/g,'&quot;')};S.tab='picks';S.scr='draft';S.err='';render()">Make Picks</button>`;
+      h+=`<button class="bt bg" style="flex:1;min-width:140px" onclick="S.picks=${JSON.stringify((me?.picks)||[]).replace(/"/g,'&quot;')};S.sbets=${JSON.stringify((me?.side_bets)||{}).replace(/"/g,'&quot;')};S.tab='picks';S.scr='draft';S.err='';render()">Make Picks</button>`;
     }
-    h+=`<button class="bt bo" style="flex:1" onclick="S.scr='leaderboard';loadGroup(S.gid)">Leaderboard</button></div>`;
+    h+=`<button class="bt bo" style="flex:1;min-width:140px" onclick="S.scr='leaderboard';loadGroup(S.gid)">Pool</button>`;
+    h+=`<button class="bt bo" style="flex:1;min-width:140px;border-color:#8B9F6B;color:#8B9F6B" onclick="S.scr='masters';loadGroup(S.gid)">⛳ Live Masters</button></div>`;
 
     // Swap
     const myCut=(me?.picks||[]).filter(n=>S.cuts.includes(n));
@@ -578,6 +614,94 @@ function render(){
         </div>`;
       });
       h+=`</div>`;
+    }
+    h+=`</div>`;
+  }
+
+  // ========== LIVE MASTERS LEADERBOARD ==========
+  else if(S.scr==='masters'){
+    // Auto-fetch on first entry if no data
+    if(!S.liveBoard&&!S.liveLoading){fetchMastersBoard(true)}
+    startPoll();
+
+    // Build pick-owner map: golfer name -> player names who picked them
+    const pickMap={};
+    S.players.forEach(p=>(p.picks||[]).forEach(g=>{
+      if(!pickMap[g])pickMap[g]=[];
+      pickMap[g].push(p.name);
+    }));
+
+    h+=`<div class="col gap10 fu">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <button class="bt bo bs" onclick="stopPoll();S.scr='lobby';render()">← Back</button>
+        <h3 class="pf" style="font-size:17px">Live Leaderboard</h3>
+        <button class="bt bo bs" onclick="fetchMastersBoard(false)" ${S.liveLoading?'disabled':''}>${S.liveLoading?'…':'↻'}</button>
+      </div>`;
+
+    if(S.liveBoardAt){
+      const ago=Math.round((Date.now()-S.liveBoardAt.getTime())/1000);
+      h+=`<div class="fs11 muted2 tac">Updated ${ago<60?ago+'s':Math.round(ago/60)+'m'} ago · auto-refreshes every 60s</div>`;
+    }
+
+    if(!S.liveBoard||S.liveBoard.length===0){
+      if(S.liveLoading){
+        h+=`<div class="cd tac muted fs13" style="padding:30px">Loading live scores...</div>`;
+      }else{
+        h+=`<div class="cd tac muted fs13" style="padding:20px">No live scores available yet.<br><span class="fs11 muted2">First tee shot Thursday ~8am ET</span></div>`;
+      }
+    }else{
+      // Sort by score (lower = better), then by status
+      const sorted=[...S.liveBoard].sort((a,b)=>{
+        if(a.is_cut&&!b.is_cut)return 1;
+        if(!a.is_cut&&b.is_cut)return -1;
+        return (a.score||0)-(b.score||0);
+      });
+
+      h+=`<div class="cd" style="overflow:hidden">
+        <div style="display:grid;grid-template-columns:36px 1fr 50px 50px;align-items:center;padding:10px 14px;font-size:10px;font-weight:600;color:rgba(232,224,208,.35);text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid rgba(255,255,255,.08)">
+          <div>POS</div><div>Player</div><div class="tar">Thru</div><div class="tar">Score</div>
+        </div>
+        <div style="max-height:65vh;overflow-y:auto">`;
+
+      let displayPos=0;let lastScore=null;let actualPos=0;
+      sorted.forEach((p,i)=>{
+        actualPos++;
+        if(p.score!==lastScore||p.is_cut){displayPos=actualPos;lastScore=p.score}
+        const owners=pickMap[p.name]||[];
+        // Try matching by last name if not exact
+        if(owners.length===0){
+          const last=p.name.split(' ').pop().toLowerCase();
+          for(const draftedName in pickMap){
+            if(draftedName.split(' ').pop().toLowerCase()===last){
+              owners.push(...pickMap[draftedName]);
+              break;
+            }
+          }
+        }
+        const isMine=owners.includes(S.pname.trim());
+        const isDrafted=owners.length>0;
+        const scoreColor=p.is_cut?'rgba(232,224,208,.35)':p.score<0?'#8B9F6B':p.score>0?'#e07070':'#e8e0d0';
+        const rowBg=isMine?'rgba(201,168,76,.08)':isDrafted?'rgba(139,159,107,.05)':'transparent';
+        const borderL=isMine?'3px solid #C9A84C':isDrafted?'3px solid #8B9F6B':'3px solid transparent';
+
+        h+=`<div style="display:grid;grid-template-columns:36px 1fr 50px 50px;align-items:center;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.04);background:${rowBg};border-left:${borderL}">
+          <div class="fs12 fw6 ${p.is_cut?'muted2':''}">${p.is_cut?'CUT':(p.pos||displayPos)}</div>
+          <div style="min-width:0">
+            <div class="fs13 fw6" style="${p.is_cut?'opacity:.5':''}">${esc(p.name)}</div>
+            ${owners.length>0?`<div class="fs10" style="color:${isMine?'#C9A84C':'#8B9F6B'};margin-top:1px">${owners.map(o=>esc(o)).join(', ')}</div>`:''}
+          </div>
+          <div class="tar fs11 muted2">${p.is_cut?'—':esc(p.thru||'')}</div>
+          <div class="tar fw6 fs14" style="color:${scoreColor}">${p.is_cut?'+10':fm(p.score||0)}</div>
+        </div>`;
+      });
+      h+=`</div></div>`;
+
+      // Legend
+      h+=`<div class="cd row" style="padding:10px 14px;gap:14px;flex-wrap:wrap;font-size:11px">
+        <div class="row" style="align-items:center;gap:5px"><span style="width:10px;height:10px;background:#C9A84C;border-radius:2px"></span><span class="muted">Your picks</span></div>
+        <div class="row" style="align-items:center;gap:5px"><span style="width:10px;height:10px;background:#8B9F6B;border-radius:2px"></span><span class="muted">Pool picks</span></div>
+        <div class="muted2" style="margin-left:auto">${sorted.filter(p=>!p.is_cut).length} active · ${sorted.filter(p=>p.is_cut).length} cut</div>
+      </div>`;
     }
     h+=`</div>`;
   }
